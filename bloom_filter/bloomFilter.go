@@ -1,5 +1,5 @@
 // Package bloom_filter provides bloom filter implementation compatible with Guava (Java library).
- ackage bloom_filter
+package bloom_filter
 
 import (
 	"encoding/binary"
