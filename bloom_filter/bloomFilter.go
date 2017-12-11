@@ -5,8 +5,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"github.com/spaolacci/murmur3"
 	"math"
+	"os"
+
+	"github.com/spaolacci/murmur3"
 )
 
 type BitArray struct {
@@ -19,13 +21,14 @@ func CreateBitArray(bitNum int64) *BitArray {
 	if remain != 0 {
 		longNum += 1
 	}
-	bitArray := BitArray { make([]uint64, longNum) }
+	os.Open
+	bitArray := BitArray{make([]uint64, longNum)}
 	return &bitArray
 }
 
 func (bar *BitArray) Set(idx int64) bool {
 	dataIdx := idx >> 6
-	bitMask := uint64(1) << uint64(idx & 63)
+	bitMask := uint64(1) << uint64(idx&63)
 	oldResult := (bar.data[dataIdx] & bitMask) != 0
 	bar.data[dataIdx] |= bitMask
 	return !oldResult
@@ -33,7 +36,7 @@ func (bar *BitArray) Set(idx int64) bool {
 
 func (bar *BitArray) Get(idx int64) bool {
 	dataIdx := idx >> 6
-	bitMask := uint64(1) << uint64(idx & 63)
+	bitMask := uint64(1) << uint64(idx&63)
 	return (bar.data[dataIdx] & bitMask) != 0
 }
 
@@ -42,8 +45,8 @@ func (bar *BitArray) BitsSize() int64 {
 }
 
 type BloomFilter struct {
-	numOfHash	int32
-	data 		*BitArray
+	numOfHash *int32
+	data      *BitArray
 }
 
 func LoadFromReader(reader io.Reader) (*BloomFilter, error) {
@@ -76,22 +79,23 @@ func LoadFromReader(reader io.Reader) (*BloomFilter, error) {
 		return nil, err
 	}
 
-	bitArray := BitArray{make([]uint64, dataLength / 8)}
+	bitArray := BitArray{make([]uint64, dataLength/8)}
 	for idx, _ := range bitArray.data {
 		var data uint64 = 0
 		binary.Read(reader, binary.BigEndian, &data)
 		bitArray.data[idx] = data
 	}
 
-	bloomFilter := BloomFilter { numOfHash: int32(numOfHash), data: &bitArray }
+	int32NumOfHash := int32(numOfHash)
+	bloomFilter := BloomFilter{numOfHash: &int32NumOfHash, data: &bitArray}
 	return &bloomFilter, nil
 }
 
 func CreateBloomFilter(expectedInsertions int64, fpp float64) *BloomFilter {
 	optimumNumOfBits := int64(float64(-expectedInsertions) * math.Log(fpp) / (math.Log(2) * math.Log(2)))
-	optimumNumOfHash := int32(math.Max(float64(1), math.Floor(0.5 + float64(optimumNumOfBits) / float64(expectedInsertions) * math.Log(2))))
+	optimumNumOfHash := int32(math.Max(float64(1), math.Floor(0.5+float64(optimumNumOfBits)/float64(expectedInsertions)*math.Log(2))))
 	bitArray := CreateBitArray(optimumNumOfBits)
-	bloomFilter := BloomFilter { numOfHash: optimumNumOfHash, data: bitArray }
+	bloomFilter := BloomFilter{numOfHash: &optimumNumOfHash, data: bitArray}
 	return &bloomFilter
 }
 
@@ -103,7 +107,7 @@ func (bf *BloomFilter) Save(w io.Writer) error {
 	}
 
 	// Write number of hash
-	err = binary.Write(w, binary.BigEndian, byte(bf.numOfHash))
+	err = binary.Write(w, binary.BigEndian, byte(*bf.numOfHash))
 	if err != nil {
 		return err
 	}
@@ -130,7 +134,7 @@ func (bf *BloomFilter) MightContain(data []byte) bool {
 	hasher.Write(data)
 	h1, h2 := hasher.Sum128()
 	combinedHash := int64(h1)
-	for i := bf.numOfHash; i > 0; i-- {
+	for i := *(bf.numOfHash); i > 0; i-- {
 		if !bf.data.Get(combinedHash & int64(0x7fffffffffffffff) % bf.data.BitsSize()) {
 			return false
 		}
@@ -139,14 +143,14 @@ func (bf *BloomFilter) MightContain(data []byte) bool {
 	return true
 }
 
-func (bf *BloomFilter) Put(data[] byte) bool {
+func (bf *BloomFilter) Put(data []byte) bool {
 	hasher := murmur3.New128()
 	hasher.Write(data)
 	h1, h2 := hasher.Sum128()
 	combinedHash := int64(h1)
 	bitsChanged := false
-	for i := bf.numOfHash; i > 0; i-- {
-		bitsChanged = bf.data.Set(combinedHash & int64(0x7fffffffffffffff) % bf.data.BitsSize()) || bitsChanged
+	for i := *(bf.numOfHash); i > 0; i-- {
+		bitsChanged = bf.data.Set(combinedHash&int64(0x7fffffffffffffff)%bf.data.BitsSize()) || bitsChanged
 		combinedHash += int64(h2)
 	}
 	return bitsChanged
