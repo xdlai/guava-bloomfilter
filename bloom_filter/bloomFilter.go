@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"math"
-	"os"
 
 	"github.com/spaolacci/murmur3"
 )
@@ -21,7 +20,6 @@ func CreateBitArray(bitNum int64) *BitArray {
 	if remain != 0 {
 		longNum += 1
 	}
-	os.Open
 	bitArray := BitArray{make([]uint64, longNum)}
 	return &bitArray
 }
